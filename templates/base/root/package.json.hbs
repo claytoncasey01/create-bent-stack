@@ -1,0 +1,25 @@
+{
+  "name": "{{PROJECT_NAME}}",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "check-types": "turbo run check-types",
+    "typecheck": "turbo run check-types",
+    "eden:generate": "bunx tsc -p apps/api/tsconfig.json --emitDeclarationOnly",
+    "db:generate": "bun run --cwd packages/database db:generate",
+    "db:migrate": "bun run --cwd packages/database db:migrate",
+    "db:push": "bun run --cwd packages/database db:push",
+    "db:studio": "bun run --cwd packages/database db:studio"
+  },
+  "devDependencies": {
+    "prettier": "^3.7.4",
+    "turbo": "^2.6.1",
+    "typescript": "5.9.2"
+  },
+  "packageManager": "bun@1.2.19",
+  "engines": { "node": ">=18" }
+}

@@ -1,0 +1,47 @@
+# {{PROJECT_TITLE}}
+
+A full-stack monorepo powered by [Eden Stack](https://github.com/casey-clayton/create-eden-stack) — Next.js + Elysia + Prisma + Better Auth with end-to-end type safety via Eden Treaty.
+
+## Getting Started
+
+```bash
+# Install dependencies
+bun install
+
+# Set up environment
+cp .env.example .env
+
+# Push database schema
+bun run db:push
+
+# Start development servers
+bun run dev
+```
+
+## Project Structure
+
+```
+{{PROJECT_NAME}}/
+├── apps/
+│   ├── api/          # Elysia API server
+│   └── web/          # Next.js frontend
+├── packages/
+│   ├── database/     # Prisma schema + client
+│   ├── shared/       # Shared types + utilities
+│   ├── eslint-config/
+│   └── typescript-config/
+├── turbo.json
+└── package.json
+```
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `bun run dev` | Start all apps in development mode |
+| `bun run build` | Build all apps |
+| `bun run lint` | Lint all packages |
+| `bun run typecheck` | Type-check all packages |
+| `bun run db:push` | Push Prisma schema to database |
+| `bun run db:studio` | Open Prisma Studio |
+| `bun run eden:generate` | Generate Eden Treaty types |
