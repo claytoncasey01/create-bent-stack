@@ -1,0 +1,28 @@
+{
+  "name": "{{PACKAGE_SCOPE}}/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint --max-warnings 0",
+    "check-types": "tsc --noEmit"
+  },
+  "exports": {
+    "./types/api": {
+      "types": "./src/types/api.ts",
+      "import": "./src/types/api.ts",
+      "default": "./src/types/api.ts"
+    },
+    "./types/eden": {
+      "types": "./src/types/eden.ts",
+      "import": "./src/types/eden.ts",
+      "default": "./src/types/eden.ts"
+    }
+  },
+  "devDependencies": {
+    "{{PACKAGE_SCOPE}}/eslint-config": "workspace:*",
+    "{{PACKAGE_SCOPE}}/typescript-config": "workspace:*",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.2"
+  }
+}
