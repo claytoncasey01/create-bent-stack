@@ -1,0 +1,84 @@
+import { prisma } from "{{PACKAGE_SCOPE}}/database";
+import { success } from "@/utils/response";
+import { NotFoundError } from "@/lib/errors";
+
+export const postsHandler = {
+  list: async (profileId: string, query: { page?: number; pageSize?: number }) => {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const skip = (page - 1) * pageSize;
+
+    const [items, total] = await Promise.all([
+      prisma.post.findMany({
+        where: { profileId },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: pageSize,
+      }),
+      prisma.post.count({ where: { profileId } }),
+    ]);
+
+    return success({
+      items,
+      total,
+      page,
+      pageSize,
+      hasMore: skip + items.length < total,
+    });
+  },
+
+  getById: async (profileId: string, id: string) => {
+    const post = await prisma.post.findFirst({
+      where: { id, profileId },
+    });
+
+    if (!post) {
+      throw new NotFoundError("Post not found");
+    }
+
+    return success(post);
+  },
+
+  create: async (profileId: string, data: { title: string; content?: string }) => {
+    const post = await prisma.post.create({
+      data: {
+        profileId,
+        title: data.title,
+        content: data.content ?? null,
+      },
+    });
+
+    return success(post);
+  },
+
+  update: async (profileId: string, id: string, data: { title?: string; content?: string }) => {
+    const existing = await prisma.post.findFirst({
+      where: { id, profileId },
+    });
+
+    if (!existing) {
+      throw new NotFoundError("Post not found");
+    }
+
+    const post = await prisma.post.update({
+      where: { id },
+      data,
+    });
+
+    return success(post);
+  },
+
+  remove: async (profileId: string, id: string) => {
+    const existing = await prisma.post.findFirst({
+      where: { id, profileId },
+    });
+
+    if (!existing) {
+      throw new NotFoundError("Post not found");
+    }
+
+    await prisma.post.delete({ where: { id } });
+
+    return success({ deleted: true });
+  },
+};

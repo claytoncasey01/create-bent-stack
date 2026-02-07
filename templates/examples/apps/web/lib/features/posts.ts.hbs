@@ -1,0 +1,123 @@
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+  queryOptions,
+} from "@tanstack/react-query";
+import { toast } from "sonner";
+import { apiClient, type ApiClient } from "@/lib/api";
+
+export type Post = {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// ============================================================================
+// Query Keys
+// ============================================================================
+
+export const postKeys = {
+  all: ["posts"] as const,
+  list: () => [...postKeys.all, "list"] as const,
+  detail: (id: string) => [...postKeys.all, "detail", id] as const,
+};
+
+// ============================================================================
+// Query Options
+// ============================================================================
+
+export function postsQueryOptions(client: ApiClient = apiClient) {
+  return queryOptions({
+    queryKey: postKeys.list(),
+    queryFn: async () => {
+      const response = await client.api.v1.posts.get();
+
+      if (response.error) {
+        throw new Error("Failed to fetch posts");
+      }
+
+      return (response.data?.data ?? []) as Post[];
+    },
+  });
+}
+
+// ============================================================================
+// Queries
+// ============================================================================
+
+export function usePosts() {
+  return useSuspenseQuery(postsQueryOptions());
+}
+
+// ============================================================================
+// Mutations
+// ============================================================================
+
+export function useCreatePost() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (newPost: { title: string; content: string }) => {
+      const response = await apiClient.api.v1.posts.post(newPost);
+
+      if (response.error) {
+        throw new Error("Failed to create post");
+      }
+
+      return response.data?.data as Post;
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: postKeys.list() });
+    },
+  });
+}
+
+export function useUpdatePost() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { title: string; content: string } }) => {
+      const response = await apiClient.api.v1.posts({ id }).patch(data);
+
+      if (response.error) {
+        throw new Error("Failed to update post");
+      }
+
+      return response.data?.data as Post;
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: postKeys.list() });
+    },
+  });
+}
+
+export function useDeletePost() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiClient.api.v1.posts({ id }).delete();
+
+      if (response.error) {
+        throw new Error("Failed to delete post");
+      }
+
+      return { success: true };
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: postKeys.list() });
+    },
+  });
+}
