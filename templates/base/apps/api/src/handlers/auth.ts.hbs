@@ -1,0 +1,84 @@
+import { prisma } from "{{PACKAGE_SCOPE}}/database";
+import { auth } from "@/lib/auth";
+import { success, error } from "@/utils/response";
+
+const profileSelect = {
+  id: true,
+  userId: true,
+  email: true,
+  firstName: true,
+  lastName: true,
+  avatarUrl: true,
+  createdAt: true,
+} as const;
+
+export const authHandler = {
+  getMe: async (headers: Headers) => {
+    const session = await auth.api.getSession({ headers });
+
+    if (!session) {
+      return error("UNAUTHORIZED", "Unauthorized");
+    }
+
+    let profile = await prisma.profile.findUnique({
+      where: { userId: session.user.id },
+      select: profileSelect,
+    });
+
+    if (!profile) {
+      profile = await prisma.profile.create({
+        data: {
+          userId: session.user.id,
+          email: session.user.email,
+          firstName: session.user.name?.split(" ")[0] ?? null,
+          lastName: session.user.name?.split(" ").slice(1).join(" ") ?? null,
+          avatarUrl: session.user.image ?? null,
+        },
+        select: profileSelect,
+      });
+    }
+
+    return success({
+      user: {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        image: session.user.image,
+        emailVerified: session.user.emailVerified,
+      },
+      profile,
+    });
+  },
+
+  getSession: async (headers: Headers) => {
+    const session = await auth.api.getSession({ headers });
+
+    if (!session) {
+      return { authenticated: false as const };
+    }
+
+    const profile = await prisma.profile.upsert({
+      where: { userId: session.user.id },
+      create: {
+        userId: session.user.id,
+        email: session.user.email,
+        firstName: session.user.name?.split(" ")[0] ?? null,
+        lastName: session.user.name?.split(" ").slice(1).join(" ") ?? null,
+        avatarUrl: session.user.image ?? null,
+      },
+      update: {},
+      select: { id: true },
+    });
+
+    return {
+      authenticated: true as const,
+      user: {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        emailVerified: session.user.emailVerified,
+      },
+      profileId: profile.id,
+    };
+  },
+};

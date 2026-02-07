@@ -1,0 +1,54 @@
+import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+import { prisma } from "{{PACKAGE_SCOPE}}/database";
+
+export const auth = betterAuth({
+  database: prismaAdapter(prisma, {
+    provider: "postgresql",
+  }),
+  emailAndPassword: {
+    enabled: true,
+  },
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60,
+    },
+  },
+  trustedOrigins: ["http://localhost:3000"],
+});
+
+export type Session = typeof auth.$Infer.Session;
+
+export async function getOrCreateProfile(
+  session: Session,
+): Promise<{
+  user: Session["user"];
+  session: Session["session"];
+  profileId: string;
+  userId: string;
+}> {
+  let profile = await prisma.profile.findUnique({
+    where: { userId: session.user.id },
+    select: { id: true },
+  });
+
+  if (!profile) {
+    profile = await prisma.profile.create({
+      data: {
+        userId: session.user.id,
+        email: session.user.email,
+        firstName: session.user.name?.split(" ")[0] ?? null,
+        lastName: session.user.name?.split(" ").slice(1).join(" ") ?? null,
+      },
+      select: { id: true },
+    });
+  }
+
+  return {
+    user: session.user,
+    session: session.session,
+    profileId: profile.id,
+    userId: session.user.id,
+  };
+}

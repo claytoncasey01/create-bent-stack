@@ -1,0 +1,31 @@
+import { Elysia } from "elysia";
+import { auth, getOrCreateProfile } from "@/lib/auth";
+
+export const betterAuthPlugin = new Elysia({ name: "better-auth" })
+  .mount(auth.handler)
+  .macro({
+    auth: {
+      async resolve({ status, request: { headers } }) {
+        const session = await auth.api.getSession({ headers });
+
+        if (!session) {
+          return status(401);
+        }
+
+        return await getOrCreateProfile(session);
+      },
+    },
+  });
+
+export const authPlugin = new Elysia({ name: "auth" })
+  .use(betterAuthPlugin)
+  .derive(async ({ request: { headers } }) => {
+    const session = await auth.api.getSession({ headers });
+
+    if (!session) {
+      throw new Error("Unauthorized");
+    }
+
+    return await getOrCreateProfile(session);
+  })
+  .as("scoped");
