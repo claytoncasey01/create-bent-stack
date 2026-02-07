@@ -1,0 +1,167 @@
+# API App — Agent Guide
+
+Elysia API server running on Bun with Better Auth, Prisma ORM, and Pino logging.
+
+## Directory Structure
+
+```
+apps/api/src/
+├── index.ts            # App entry — middleware, route registration, export type App
+├── handlers/           # Business logic (pure functions, no Elysia types)
+│   └── auth.ts
+├── routes/             # Elysia route definitions (thin, delegate to handlers)
+│   └── auth.ts
+├── middleware/
+│   ├── auth.ts         # betterAuthPlugin (auth macro) + authPlugin (scoped derive)
+│   ├── error-handler.ts
+│   └── request-logger.ts
+├── lib/
+│   ├── auth.ts         # Better Auth instance + getOrCreateProfile helper
+│   ├── errors.ts       # AppError, NotFoundError, ForbiddenError, ValidationError
+│   └── logger.ts       # Pino logger + createChildLogger
+└── utils/
+    └── response.ts     # success() and error() response helpers
+```
+
+## Route / Handler Separation
+
+Routes are thin — they extract request data and delegate to handlers. Handlers contain business logic and return structured responses.
+
+### Handler pattern
+```ts
+// handlers/my-handler.ts
+import { prisma } from "{{PACKAGE_SCOPE}}/database";
+import { success, error } from "@/utils/response";
+
+export const myHandler = {
+  list: async (userId: string) => {
+    const items = await prisma.myModel.findMany({ where: { userId } });
+    return success(items);
+  },
+
+  create: async (userId: string, data: { name: string }) => {
+    const item = await prisma.myModel.create({
+      data: { ...data, userId },
+    });
+    return success(item);
+  },
+};
+```
+
+### Route pattern
+```ts
+// routes/my-route.ts
+import { Elysia, t } from "elysia";
+import { authPlugin } from "@/middleware/auth";
+import { myHandler } from "@/handlers/my-handler";
+
+export const myRoutes = new Elysia({ prefix: "/my-resource" })
+  .use(authPlugin)
+  .get("/", ({ userId }) => myHandler.list(userId))
+  .post("/", ({ userId, body }) => myHandler.create(userId, body), {
+    body: t.Object({
+      name: t.String(),
+    }),
+  });
+```
+
+### Registering routes
+
+Add to the `.group("/api/v1", ...)` block in `src/index.ts`:
+
+```ts
+.group("/api/v1", (app) => app
+  .use(authRoutes)
+  .use(myRoutes)
+)
+```
+
+## Authentication
+
+Two auth middleware plugins are available:
+
+### `betterAuthPlugin`
+Mounts Better Auth routes at `/api/auth/*` and provides an `auth` **macro** for per-route protection:
+
+```ts
+.get("/protected", ({ user }) => { ... }, { auth: true })
+```
+
+### `authPlugin`
+Uses `.derive()` + `.as("scoped")` to require auth for **all routes** in the Elysia instance. Derives `user`, `session`, `profileId`, and `userId` into the context:
+
+```ts
+import { authPlugin } from "@/middleware/auth";
+
+const routes = new Elysia()
+  .use(authPlugin)
+  .get("/", ({ userId, profileId }) => { ... });
+```
+
+Use `authPlugin` for route groups where every endpoint needs auth. Use the `auth` macro for individual routes.
+
+## Error Handling
+
+### Throwing errors
+```ts
+import { NotFoundError, ForbiddenError, ValidationError } from "@/lib/errors";
+
+throw new NotFoundError("Item not found");
+throw new ForbiddenError("Not your resource");
+throw new ValidationError("Invalid input", { field: "name" });
+```
+
+### Error classes
+| Class | Code | Status |
+|---|---|---|
+| `AppError` | custom | custom |
+| `NotFoundError` | `NOT_FOUND` | 404 |
+| `ForbiddenError` | `FORBIDDEN` | 403 |
+| `ValidationError` | `VALIDATION_ERROR` | 400 |
+
+The global error handler in `middleware/error-handler.ts` catches `AppError` subclasses, Elysia validation errors, and unexpected errors, logging them via Pino and returning structured JSON.
+
+## Response Helpers
+
+```ts
+import { success, error } from "@/utils/response";
+
+// Success response: { success: true, data: T }
+return success({ id: "1", name: "foo" });
+
+// Error response: { success: false, error: { code, message, details? } }
+return error("NOT_FOUND", "Item not found");
+```
+
+Response types are defined in `{{PACKAGE_SCOPE}}/shared/types/api`.
+
+## Request Logging
+
+The `requestLogger` middleware automatically logs all requests with:
+- A unique `requestId` (from `x-request-id` header or auto-generated)
+- Method, path, query params, status code, and duration
+- A child logger (`log`) is available in route handlers via context
+
+## Type Safety — `type App` Export
+
+`src/index.ts` exports `type App = typeof app`. The web app imports this type (via devDependency on `{{PACKAGE_SCOPE}}/api`) to get full end-to-end type safety with Eden Treaty. Any route you add is automatically available to the frontend client with correct types.
+
+## Database Access
+
+```ts
+import { prisma } from "{{PACKAGE_SCOPE}}/database";
+
+const items = await prisma.myModel.findMany();
+```
+
+Schema is at `packages/database/prisma/schema.prisma`. After schema changes:
+1. `bun run db:generate` — regenerate Prisma client
+2. `bun run db:push` or `bun run db:migrate` — sync database
+
+## Path Aliases
+
+The API uses `@/*` mapped to `./src/*` (configured in `tsconfig.json`):
+```ts
+import { auth } from "@/lib/auth";
+import { myHandler } from "@/handlers/my-handler";
+```

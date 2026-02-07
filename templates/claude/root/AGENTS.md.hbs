@@ -1,0 +1,142 @@
+# {{PROJECT_TITLE}} — Agent Workflows
+
+## Adding a New API Route
+
+1. **Create handler** in `apps/api/src/handlers/<name>.ts`:
+   ```ts
+   import { prisma } from "{{PACKAGE_SCOPE}}/database";
+   import { success, error } from "@/utils/response";
+
+   export const myHandler = {
+     list: async () => {
+       const items = await prisma.myModel.findMany();
+       return success(items);
+     },
+   };
+   ```
+
+2. **Create route** in `apps/api/src/routes/<name>.ts`:
+   ```ts
+   import { Elysia } from "elysia";
+   import { myHandler } from "@/handlers/my-handler";
+
+   export const myRoutes = new Elysia({ prefix: "/my-resource" })
+     .get("/", () => myHandler.list());
+   ```
+
+3. **Register route** in `apps/api/src/index.ts` inside the `.group("/api/v1", ...)` block:
+   ```ts
+   .group("/api/v1", (app) => app
+     .use(authRoutes)
+     .use(myRoutes)  // add here
+   )
+   ```
+
+4. If the route needs authentication, use the `authPlugin`:
+   ```ts
+   import { authPlugin } from "@/middleware/auth";
+
+   export const myRoutes = new Elysia({ prefix: "/my-resource" })
+     .use(authPlugin)  // derives user, session, profileId, userId
+     .get("/", ({ userId }) => myHandler.list(userId));
+   ```
+
+## Adding a New Frontend Feature
+
+1. **Create API query options** in `apps/web/lib/features/<name>.ts`:
+   ```ts
+   import { queryOptions } from "@tanstack/react-query";
+   import { apiClient } from "@/lib/api";
+
+   export const myQueryOptions = queryOptions({
+     queryKey: ["my-resource"],
+     queryFn: async () => {
+       const { data, error } = await apiClient.api.v1["my-resource"].get();
+       if (error) throw error;
+       return data;
+     },
+   });
+   ```
+
+2. **Create component** in `apps/web/components/<name>/`:
+   ```tsx
+   "use client";
+   import { useSuspenseQuery } from "@tanstack/react-query";
+   import { myQueryOptions } from "@/lib/features/my-feature";
+
+   export function MyList() {
+     const { data } = useSuspenseQuery(myQueryOptions);
+     return <div>{/* render data */}</div>;
+   }
+   ```
+
+3. **Create page** in `apps/web/app/(app)/<name>/page.tsx`:
+   ```tsx
+   import { MyList } from "@/components/my-feature/my-list";
+
+   export default function MyPage() {
+     return <MyList />;
+   }
+   ```
+
+## Adding a New Workspace Package
+
+1. Create `packages/<name>/package.json`:
+   ```json
+   {
+     "name": "{{PACKAGE_SCOPE}}/<name>",
+     "version": "0.0.0",
+     "private": true,
+     "type": "module",
+     "main": "./src/index.ts",
+     "types": "./src/index.ts",
+     "scripts": {
+       "lint": "eslint .",
+       "check-types": "tsc --noEmit"
+     },
+     "devDependencies": {
+       "{{PACKAGE_SCOPE}}/eslint-config": "workspace:*",
+       "{{PACKAGE_SCOPE}}/typescript-config": "workspace:*"
+     }
+   }
+   ```
+
+2. Create `packages/<name>/tsconfig.json` extending the shared config.
+
+3. Add as a dependency where needed: `"{{PACKAGE_SCOPE}}/<name>": "workspace:*"`.
+
+4. Run `bun install` to link the new workspace.
+
+## Turbo Task Dependencies
+
+```
+build  → ^build  (builds dependencies first)
+lint   → ^lint
+check-types → ^check-types
+dev    → persistent, no cache
+```
+
+Global env vars passed through Turbo: `DATABASE_URL`, `NODE_ENV`, `PORT`, `FRONTEND_URL`, `ALLOWED_ORIGINS`, `BETTER_AUTH_SECRET`, `LOG_LEVEL`.
+
+## Environment Variables
+
+### `apps/api/.env`
+- `DATABASE_URL` — PostgreSQL connection string
+- `BETTER_AUTH_SECRET` — Auth session secret
+- `PORT` — API port (default: 8080)
+- `ALLOWED_ORIGINS` — CORS origins, comma-separated (default: `http://localhost:3000`)
+- `LOG_LEVEL` — Pino log level (default: `debug` in dev, `info` in prod)
+
+### `apps/web/.env`
+- `NEXT_PUBLIC_API_URL` — API base URL (default: `http://localhost:8080`)
+
+### `packages/database/.env`
+- `DATABASE_URL` — Same PostgreSQL connection string as the API
+
+## Common Gotchas
+
+- **Run `db:generate` before `check-types`**: Prisma client must be generated for type-checking to pass.
+- **Eden Treaty is a devDependency**: `{{PACKAGE_SCOPE}}/api` is listed in the web app's `devDependencies` (not `dependencies`) so it isn't bundled — it's only used for types.
+- **ESLint flat config**: All workspaces use flat ESLint config (`eslint.config.js`). Packages with `lint` scripts need `eslint` as a direct devDependency.
+- **Path aliases**: The API uses `@/*` mapped to `./src/*` via tsconfig paths. The web app uses Next.js's built-in `@/*` alias.
+- **Script naming**: All workspaces must use `check-types` (not `typecheck`) for the Turbo pipeline to work.

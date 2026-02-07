@@ -1,0 +1,170 @@
+# Web App — Agent Guide
+
+Next.js 16 frontend with React 19, Tailwind CSS v4, shadcn/ui, Jotai, React Query, and TanStack Form.
+
+## Directory Structure
+
+```
+apps/web/
+├── app/
+│   ├── layout.tsx          # Root layout (Providers wrapper)
+│   ├── page.tsx            # Landing page
+│   ├── globals.css         # Tailwind v4 styles
+│   ├── (app)/              # Protected routes (auth-guarded layout)
+│   │   ├── layout.tsx      # Checks session, redirects if unauthenticated
+│   │   └── dashboard/
+│   └── (auth)/             # Auth routes (sign-in, sign-up)
+│       ├── layout.tsx      # Redirects to dashboard if already authenticated
+│       ├── sign-in/
+│       └── sign-up/
+├── components/
+│   ├── providers.tsx       # QueryClient, Jotai, NextThemes, Toaster
+│   ├── ui/                 # shadcn/ui components
+│   └── auth/               # Auth forms
+├── lib/
+│   ├── api.ts              # Eden Treaty client (apiClient, createServerApiClient)
+│   ├── auth-client.ts      # Better Auth React client (useSession, signIn, signOut)
+│   ├── reactQuery.ts       # QueryClient factory
+│   ├── form-utils.ts       # TanStack Form helpers
+│   ├── cookies.ts          # Cookie helpers for server components
+│   └── utils.ts            # cn() utility for class merging
+└── proxy.ts                # Auth middleware (protects routes)
+```
+
+## Route Groups
+
+- **`(app)/`** — Protected. The layout checks the session via `createServerApiClient` and redirects to `/sign-in` if unauthenticated.
+- **`(auth)/`** — Public auth pages. The layout redirects to `/dashboard` if already authenticated.
+
+New authenticated pages go under `(app)/`. New public pages go at the `app/` root.
+
+## Component Patterns
+
+### Server Components (default)
+All components are Server Components by default. Use them for data fetching and static rendering.
+
+### Client Components
+Add `"use client"` at the top of the file. Required for:
+- React hooks (`useState`, `useEffect`, `useSuspenseQuery`, etc.)
+- Event handlers (`onClick`, `onSubmit`, etc.)
+- Browser APIs
+
+### Server Actions
+Define in separate `actions.ts` files with `"use server"` at the top. Used for form submissions (sign-in, sign-up).
+
+## API Communication
+
+### Client-side (Client Components)
+```ts
+import { apiClient } from "@/lib/api";
+
+// GET request
+const { data, error } = await apiClient.api.v1["my-resource"].get();
+
+// POST request
+const { data, error } = await apiClient.api.v1["my-resource"].post({ name: "foo" });
+```
+
+### Server-side (Server Components / Server Actions)
+```ts
+import { createServerApiClient } from "@/lib/api";
+import { getCookieHeader } from "@/lib/cookies";
+
+const api = createServerApiClient(await getCookieHeader());
+const { data } = await api.api.v1["my-resource"].get();
+```
+
+## React Query Patterns
+
+### Define query options
+```ts
+// lib/features/my-feature.ts
+import { queryOptions } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api";
+
+export const myQueryOptions = queryOptions({
+  queryKey: ["my-resource"],
+  queryFn: async () => {
+    const { data, error } = await apiClient.api.v1["my-resource"].get();
+    if (error) throw error;
+    return data;
+  },
+});
+```
+
+### Use in components
+```tsx
+"use client";
+import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+// Query
+const { data } = useSuspenseQuery(myQueryOptions);
+
+// Mutation
+const queryClient = useQueryClient();
+const mutation = useMutation({
+  mutationFn: async (input: MyInput) => {
+    const { data, error } = await apiClient.api.v1["my-resource"].post(input);
+    if (error) throw error;
+    return data;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["my-resource"] });
+  },
+});
+```
+
+## Authentication
+
+```ts
+import { useSession, signIn, signOut } from "@/lib/auth-client";
+
+// In a client component
+const { data: session, isPending } = useSession();
+
+// Sign in
+await signIn.email({ email, password });
+
+// Sign out
+await signOut();
+```
+
+## Adding shadcn/ui Components
+
+```bash
+bunx shadcn@latest add <component-name>
+```
+
+Components are added to `components/ui/`. The config is in `components.json`.
+
+## Form Patterns (TanStack React Form)
+
+```tsx
+"use client";
+import { useForm } from "@tanstack/react-form";
+import { getFieldError, isFieldInvalid } from "@/lib/form-utils";
+
+const form = useForm({
+  defaultValues: { name: "" },
+  onSubmit: async ({ value }) => {
+    // handle submit
+  },
+});
+
+// In JSX:
+<form.Field
+  name="name"
+  validators={{ onChange: ({ value }) => !value ? "Required" : undefined }}
+>
+  {(field) => (
+    <>
+      <Input
+        value={field.state.value}
+        onChange={(e) => field.handleChange(e.target.value)}
+        onBlur={field.handleBlur}
+      />
+      {isFieldInvalid(field) && <p>{getFieldError(field)}</p>}
+    </>
+  )}
+</form.Field>
+```

@@ -15,7 +15,7 @@ function getTemplatesDir(): string {
   return join(__dirname, "templates");
 }
 
-export function scaffold(projectName: string, includeExamples: boolean): void {
+export function scaffold(projectName: string, includeExamples: boolean, includeClaude: boolean): void {
   const templatesDir = getTemplatesDir();
   const targetDir = join(process.cwd(), projectName);
 
@@ -64,6 +64,26 @@ export function scaffold(projectName: string, includeExamples: boolean): void {
       const src = join(exPkgDir, pkg);
       if (existsSync(src)) {
         copyDir(src, join(targetDir, "packages", pkg), projectName);
+      }
+    }
+  }
+
+  // Copy Claude Code config files
+  if (includeClaude) {
+    const claudeDir = join(templatesDir, "claude");
+
+    // Copy root CLAUDE.md and AGENTS.md
+    const claudeRoot = join(claudeDir, "root");
+    if (existsSync(claudeRoot)) {
+      copyDir(claudeRoot, targetDir, projectName);
+    }
+
+    // Copy app-level AGENTS.md files
+    const claudeAppsDir = join(claudeDir, "apps");
+    for (const app of appsEntries) {
+      const src = join(claudeAppsDir, app);
+      if (existsSync(src)) {
+        copyDir(src, join(targetDir, "apps", app), projectName);
       }
     }
   }

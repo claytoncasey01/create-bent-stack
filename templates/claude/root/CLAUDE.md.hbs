@@ -1,0 +1,80 @@
+# {{PROJECT_TITLE}}
+
+BENT Stack monorepo — **B**un, **E**lysia, **N**ext.js, **T**urbo.
+
+## Project Structure
+
+```
+{{PROJECT_NAME}}/
+├── apps/
+│   ├── api/          # Elysia API server (Bun runtime)
+│   └── web/          # Next.js 16 frontend (React 19)
+├── packages/
+│   ├── database/     # Prisma ORM (PostgreSQL)
+│   ├── shared/       # Shared types (API responses, Eden types)
+│   ├── eslint-config/
+│   └── typescript-config/
+├── turbo.json
+└── package.json
+```
+
+## Commands
+
+Run from the monorepo root:
+
+| Command | Description |
+|---|---|
+| `bun install` | Install all dependencies |
+| `bun run dev` | Start all apps in dev mode |
+| `bun run build` | Build all apps |
+| `bun run lint` | Lint all workspaces |
+| `bun run check-types` | Type-check all workspaces |
+| `bun run db:generate` | Generate Prisma client |
+| `bun run db:push` | Push schema to database |
+| `bun run db:migrate` | Run Prisma migrations |
+| `bun run db:studio` | Open Prisma Studio |
+
+## Package Scope
+
+All workspace packages use the `{{PACKAGE_SCOPE}}` scope:
+
+- `{{PACKAGE_SCOPE}}/api` — API app (also exports `type App` for Eden Treaty)
+- `{{PACKAGE_SCOPE}}/database` — Prisma client and schema
+- `{{PACKAGE_SCOPE}}/shared` — Shared TypeScript types
+- `{{PACKAGE_SCOPE}}/eslint-config` — ESLint flat configs
+- `{{PACKAGE_SCOPE}}/typescript-config` — Shared tsconfig bases
+
+## Key Architecture
+
+### Eden Treaty (Type-safe RPC)
+
+The API exports `type App` from `apps/api/src/index.ts`. The web app imports it as a **devDependency** (`{{PACKAGE_SCOPE}}/api: "workspace:*"`) to get end-to-end type safety without bundling the API:
+
+```ts
+// apps/web/lib/api.ts
+import { treaty } from "@elysiajs/eden";
+import type { App } from "{{PACKAGE_SCOPE}}/api";
+export const apiClient = treaty<App>(API_URL, { fetch: { credentials: "include" } });
+```
+
+### Better Auth
+
+Authentication is handled by Better Auth with Prisma adapter. The API mounts the auth handler and provides two middleware plugins:
+- `betterAuthPlugin` — mounts auth routes + provides an `auth` macro for per-route protection
+- `authPlugin` — derives `user`, `session`, `profileId`, `userId` for all routes in a group (scoped)
+
+The web app uses `better-auth/react` for client-side auth (`useSession`, `signIn`, `signOut`).
+
+### Prisma ORM
+
+Schema lives at `packages/database/prisma/schema.prisma`. Always run `bun run db:generate` after schema changes and before `check-types`.
+
+### Turbo Pipeline
+
+Tasks defined in `turbo.json`: `build`, `lint`, `check-types`, `dev`. Build/lint/check-types cascade with `^dependsOn`. Dev runs with `persistent: true` and no cache.
+
+## Agent Guides
+
+See workspace-level AGENTS.md files for detailed patterns:
+- `apps/api/AGENTS.md` — Backend routes, handlers, middleware
+- `apps/web/AGENTS.md` — Frontend components, pages, API communication

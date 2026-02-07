@@ -12,9 +12,10 @@ const program = new Command()
   .version(VERSION)
   .argument("[project-name]", "Name of the project to create")
   .option("--examples", "Include example code (todos CRUD, auth pages)")
+  .option("--claude", "Include Claude Code config (CLAUDE.md, AGENTS.md)")
   .parse(process.argv);
 
-const opts = program.opts<{ examples?: boolean }>();
+const opts = program.opts<{ examples?: boolean; claude?: boolean }>();
 let projectName = program.args[0];
 
 p.intro(pc.bgCyan(pc.black(" create-bent-stack ")));
@@ -56,11 +57,27 @@ if (!opts.examples) {
   includeExamples = examplesResult as boolean;
 }
 
+let includeClaude = opts.claude ?? false;
+
+if (!opts.claude) {
+  const claudeResult = await p.confirm({
+    message: "Include Claude Code config? (CLAUDE.md, AGENTS.md)",
+    initialValue: false,
+  });
+
+  if (p.isCancel(claudeResult)) {
+    p.cancel("Operation cancelled.");
+    process.exit(0);
+  }
+
+  includeClaude = claudeResult as boolean;
+}
+
 const s = p.spinner();
 s.start("Scaffolding your BENT Stack project...");
 
 try {
-  scaffold(projectName, includeExamples);
+  scaffold(projectName, includeExamples, includeClaude);
   s.stop("Project scaffolded successfully!");
 } catch (err) {
   s.stop("Failed to scaffold project.");
