@@ -4,11 +4,16 @@
   "description": "Scaffold a full-stack BENT monorepo — Bun, Elysia, Next.js, Turbo — with Prisma + Better Auth + Eden Treaty",
   "type": "module",
   "bin": {
-    "create-bent-stack": "src/index.ts"
+    "create-bent-stack": "dist/index.js"
   },
+  "files": [
+    "dist",
+    "templates"
+  ],
   "scripts": {
     "dev": "bun run src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target node",
+    "prepublishOnly": "bun run build",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -23,5 +28,21 @@
   "engines": {
     "node": ">=18"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "keywords": [
+    "create",
+    "scaffold",
+    "bun",
+    "elysia",
+    "nextjs",
+    "turbo",
+    "monorepo",
+    "typescript",
+    "fullstack",
+    "prisma",
+    "better-auth",
+    "eden-treaty",
+    "tailwindcss",
+    "shadcn-ui"
+  ]
 }
