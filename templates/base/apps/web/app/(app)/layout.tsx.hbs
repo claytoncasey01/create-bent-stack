@@ -1,0 +1,39 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signOut } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
+
+export default function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/sign-in");
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <header className="border-b bg-background">
+        <div className="container mx-auto flex h-14 items-center justify-between px-4">
+          <Link href="/dashboard" className="font-semibold tracking-tight">
+            {{PROJECT_TITLE}}
+          </Link>
+          <Button variant="ghost" size="sm" onClick={handleSignOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </Button>
+        </div>
+      </header>
+      <main className="flex-1 container mx-auto px-4 py-8">
+        {children}
+      </main>
+    </div>
+  );
+}
