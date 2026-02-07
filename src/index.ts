@@ -7,8 +7,8 @@ import { validateName } from "./utils.js";
 import { scaffold } from "./scaffold.js";
 
 const program = new Command()
-  .name("create-eden-stack")
-  .description("Scaffold a full-stack Eden Treaty monorepo")
+  .name("create-bent-stack")
+  .description("Scaffold a full-stack BENT monorepo")
   .version(VERSION)
   .argument("[project-name]", "Name of the project to create")
   .option("--examples", "Include example code (todos CRUD, auth pages)")
@@ -17,7 +17,7 @@ const program = new Command()
 const opts = program.opts<{ examples?: boolean }>();
 let projectName = program.args[0];
 
-p.intro(pc.bgCyan(pc.black(" create-eden-stack ")));
+p.intro(pc.bgCyan(pc.black(" create-bent-stack ")));
 
 if (!projectName) {
   const nameResult = await p.text({
@@ -57,7 +57,7 @@ if (!opts.examples) {
 }
 
 const s = p.spinner();
-s.start("Scaffolding your Eden Stack project...");
+s.start("Scaffolding your BENT Stack project...");
 
 try {
   scaffold(projectName, includeExamples);

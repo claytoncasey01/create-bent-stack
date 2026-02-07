@@ -1,10 +1,10 @@
 {
-  "name": "create-eden-stack",
+  "name": "create-bent-stack",
   "version": "0.1.0",
-  "description": "Scaffold a full-stack Eden Treaty monorepo with Next.js + Elysia + Prisma + Better Auth",
+  "description": "Scaffold a full-stack BENT monorepo — Bun, Elysia, Next.js, Turbo — with Prisma + Better Auth + Eden Treaty",
   "type": "module",
   "bin": {
-    "create-eden-stack": "src/index.ts"
+    "create-bent-stack": "src/index.ts"
   },
   "scripts": {
     "dev": "bun run src/index.ts",
