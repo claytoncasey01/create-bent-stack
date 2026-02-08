@@ -90,7 +90,7 @@ p.note(
     `cd ${projectName}`,
     "bun install",
     "# Copy .env.example to .env in apps/api and packages/database",
-    "# Update DATABASE_URL and BETTER_AUTH_SECRET",
+    "# Update DATABASE_URL, BETTER_AUTH_SECRET, and BETTER_AUTH_URL",
     "bun run db:generate",
     "bun run db:push",
     "bun run dev",

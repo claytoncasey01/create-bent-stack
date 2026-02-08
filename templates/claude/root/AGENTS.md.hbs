@@ -116,13 +116,14 @@ check-types → ^check-types
 dev    → persistent, no cache
 ```
 
-Global env vars passed through Turbo: `DATABASE_URL`, `NODE_ENV`, `PORT`, `FRONTEND_URL`, `ALLOWED_ORIGINS`, `BETTER_AUTH_SECRET`, `LOG_LEVEL`.
+Global env vars passed through Turbo: `DATABASE_URL`, `NODE_ENV`, `PORT`, `FRONTEND_URL`, `ALLOWED_ORIGINS`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `LOG_LEVEL`.
 
 ## Environment Variables
 
 ### `apps/api/.env`
 - `DATABASE_URL` — PostgreSQL connection string
 - `BETTER_AUTH_SECRET` — Auth session secret
+- `BETTER_AUTH_URL` — Auth base URL (default: `http://localhost:8080`)
 - `PORT` — API port (default: 8080)
 - `ALLOWED_ORIGINS` — CORS origins, comma-separated (default: `http://localhost:3000`)
 - `LOG_LEVEL` — Pino log level (default: `debug` in dev, `info` in prod)
