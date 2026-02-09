@@ -1,6 +1,6 @@
 {
   "name": "create-bent-stack",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Scaffold a full-stack BENT monorepo — Bun, Elysia, Next.js, Turbo — with Prisma + Better Auth + Eden Treaty",
   "type": "module",
   "bin": {
